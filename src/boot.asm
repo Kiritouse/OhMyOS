@@ -15,6 +15,18 @@ mov ax, 0xb800
 mov ds, ax
 
 mov byte [0], 'H'
+mov byte [2], 'e'
+mov byte [4], 'l'
+mov byte [6], 'l'
+mov byte [8], 'o'
+mov byte [10], ' '
+mov byte [12], 'W'
+mov byte [14], 'o'
+mov byte [16], 'r'
+mov byte [18], 'l'
+mov byte [20], 'd'
+mov byte [22], '!'
+
 
 ; 阻塞程序
 jmp $
