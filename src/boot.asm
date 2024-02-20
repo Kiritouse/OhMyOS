@@ -10,26 +10,28 @@ mov es, ax
 mov ss, ax
 mov sp, 0x7c00
 
-; 0xb800，文本显示器的内存区域
-mov ax, 0xb800
-mov ds, ax
+xchg bx, bx;bochs调试器中设置断点,交换同一个寄存器就会卡在这里
+mov si,booting
+call print
 
-mov byte [0], 'H'
-mov byte [2], 'e'
-mov byte [4], 'l'
-mov byte [6], 'l'
-mov byte [8], 'o'
-mov byte [10], ' '
-mov byte [12], 'W'
-mov byte [14], 'o'
-mov byte [16], 'r'
-mov byte [18], 'l'
-mov byte [20], 'd'
-mov byte [22], '!'
 
 
 ; 阻塞程序
 jmp $
+print:
+    mov ah,0x0e
+.next:
+    mov al,[si]
+    cmp al,0
+    jz  .done
+    int 0x10
+    inc si
+    jmp .next
+.done:
+    ret
+booting:
+    db "Booting Onix...",10,13,0;10是换行符，13是将光标移到开头，0是结束
+
 
 ; 填充剩余空间
 ;$-$$表示当前位置与当前段的开始位置的偏移量
