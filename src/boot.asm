@@ -16,17 +16,14 @@ call print
 
 
 mov edi, 0x1000;读取的目标内存
-mov ecx, 0;起始扇区
-mov bl, 1;扇区数量
-call read_disk
-xchg bx, bx;bochs调试器中设置断点,交换同一个寄存器就会卡在这里
-
-mov edi, 0x1000;写入的目标内存
 mov ecx, 2;起始扇区
-mov bl, 1;扇区数量
-call write_disk
+mov bl, 4;扇区数量
+call read_disk
 
-xchg bx, bx;bochs调试器中设置断点,交换同一个寄存器就会卡在这里
+cmp word [0x1000], 0x55aa ;比较0x1000的位置是不是0x55aa,即是否加载Loader
+jnz error
+jmp 0:0x1002 ;这里是打印字符串的位置
+
 
 
 ; 阻塞程序
@@ -100,80 +97,6 @@ read_disk:
             loop .readw
         ret
 
-
-write_disk:
-    ;设置读写扇区的数量
-    mov dx, 0x1f2;读取扇区数量的端口
-    mov al, bl
-    out dx, al
-
-    inc dx;0x1f3
-    mov al, cl;起始扇区的前8位
-    out dx, al
-    
-    inc dx;0x1f4
-    shr ecx, 8
-    mov al, cl;起始扇区的中8位
-    out dx, al
-
-    inc dx;0x1f5
-    shr ecx, 8
-    mov al, cl;起始扇区的高8位
-    out dx, al
-
-    inc dx; 0x1f6
-    shr ecx, 8
-    and cl, 0b1111;将高4位置为0
-
-    mov al, 0b1110_0000;
-    or al, cl
-    out dx,al; 主盘-LBA模式
-    
-    inc dx;0x1f7
-    mov al, 0x30;写硬盘
-    out dx, al
-
-    xor ecx, ecx;清空ecx
-    mov cl, bl;得到读写扇区的数量
-
-    .write:
-        push cx; 保存cx
-        call .writes;写一个扇区
-        call .waits;等待硬盘繁忙完毕
-        pop cx; 恢复cx
-        loop .write
-    
-    ret
-    
-    .waits:
-        mov dx, 0x1f7
-        .check:
-            in al, dx
-            jmp $+2
-            jmp $+2;一点点延迟
-            jmp $+2
-            and al, 0b1000_1000
-            cmp al, 0b0000_1000
-            jnz .check
-        ret
-    
-    .writes:
-        mov dx, 0x1f0
-        mov cx, 256; 一个扇区256字
-        .writew: ;写一个字
-            mov ax, [edi] ;将目标内存里的值写入到ax中
-            out dx,ax
-            jmp $+2
-            jmp $+2;一点点延迟
-            jmp $+2
-            
-            add edi, 2  ;这里的操作系统是是16位的，所有一个字是由两个字节构成 ,目标内存指针+2，指向下一个字
-            loop .writew
-        ret
-
-
-           
-            
 print:
     mov ah,0x0e
 .next:
@@ -187,6 +110,13 @@ print:
     ret
 booting:
     db "Booting Onix...",10,13,0;10是换行符，13是将光标移到开头，0是结束
+
+error:
+    mov si, .msg ;将msg移动到si里面
+    call print
+    hlt;让 CPU 停止
+    jmp $
+    .msg db "Booting Error!!!",10,13,0
 
 
 ; 填充剩余空间

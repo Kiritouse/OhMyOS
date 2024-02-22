@@ -1,18 +1,17 @@
 # 语法解释，用boot.bin依赖于boot.asm，下面是对应的输入到控制台里的参数
 # 如果asm有任何更改，就会用下面的语句重新生bin文件
 # 使用方法，直接使用make 开头名字即可
-boot.bin:	boot.asm
-	nasm -f bin boot.asm -o boot.bin
+# 符合这种.bin和.asm的都来进行编译
+# $<代表 输入的文件，$@代表输出的文件
+%.bin:	%.asm
+	nasm -f bin $< -o $@
 
-master.img:	boot.bin
+
+master.img:	boot.bin loader.bin
 	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat master.img
 	dd if=boot.bin of=master.img bs=512 count=1 conv=notrunc
-
-#代表clean块是伪目标，不检查文件，无论如何都会执行
-.PHONY: clean
-clean:
-	rm -rf *.bin
-	rm -rf *.img
+	dd if=loader.bin of=master.img bs=512 count=4 seek=2 conv=notrunc
+#最后一个代表从seek=2即从第二个扇区开始写，写上4个扇区
 
 # 总的来说，这行代码的作用是读取 /dev/sdb 设备的前 512 字节的数据，并将这些数据写入 tmp.bin 文件。
 # tmp.bin不可读取，但是usb.bin可读取
@@ -38,6 +37,13 @@ usb:	boot.bin /dev/sdb
 	dd if=boot.bin of=usb.bin bs=446 count=1 conv=notrunc
 	sudo dd if=usb.bin of=/dev/sdb bs=512 count=1 conv=notrunc
 	rm usb.bin
+#代表clean块是伪目标，不检查文件，无论如何都会执行
+.PHONY: clean
+clean:
+	rm -rf *.bin
+	rm -rf *.img
+
+
 
 .PHONY: bochs
 bochs:	master.img
