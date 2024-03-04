@@ -1,3 +1,4 @@
 - 在写makefile的时候，不要打空格，直接打tab键就行了
 - 所有命令最好都要带上sudo
 - 插上u盘如果没有反应，记得到设置里修改usb兼容性，改成usb3.1
+- 注意在ubuntu下安装bochs和arch下安装的安装路径是不一样的，要在bochsrc里配置
