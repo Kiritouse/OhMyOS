@@ -35,23 +35,30 @@ detect_memory:
     mov si, detecting
     call print
     xchg bx, bx
-    ;结构体数量
-    mov cx, [ards_count]
-    ;结构体指针
-    mov si, 0
-.show:
-    mov eax, [ards_buffer+si]
-    mov ebx, [ards_buffer+si+8]
-    mov edx, [ards_buffer+si+16]
-    add si, 20
+    ;实模式不能访问这么大的内存
+    mov byte [0xb8000], 'P' ;在屏幕上写入字符
+ ;前面的所有都是实模式
+    jmp prepare_protected_mode
+prepare_protected_mode:
     xchg bx, bx
-    loop .show
+    cli ;关闭中断
 
-    
+;打开A20线，操作0x92端口
+    in al,  0x92
+    or al ,0b10
+    out 0x92, al
 
-jmp error
-;阻塞
-jmp $
+;加载 gdt
+    lgdt [gdt_ptr]
+;启动保护模式
+    mov eax, cr0
+    or eax, 1
+    mov cr0, eax
+
+;用跳转来刷新缓存
+    jmp dword code_selector:protect_mode
+
+
 
 print:
     mov ah,0x0e
@@ -76,7 +83,63 @@ error:
     jmp $
     .msg db "Loading Error!!!",10,13,0
 
-ards_count:
+
+
+
+
+[bits 32]
+protect_mode:
+    xchg bx,bx
+    mov ax, data_selector
+    mov ds, ax
+    mov es,ax
+    mov fs,ax
+    mov gs,ax
+    mov ss,ax ;将所有段寄存器都设置为数据段
+
+    mov esp,    0x10000 ;设置栈顶
+
+    ;可以直接操作1M以外的内存
+    mov byte [0xb8000], 'P' ;在屏幕上写入字符
+
+    mov byte [0x200000], 'p'
+jmp $
+
+;因为低两位为特权级和表示表指示符
+;所以选择子需要左移3位 ，然后加上代码段和数据段的选择子
+;这里代码段和数据段的索引是1和2
+code_selector equ (1<<3) ;代码段选择子
+data_selector equ (2<<3) ;数据段选择子
+memory_base equ 0 ;内存基址
+memory_limit  equ ((1024*1024*1024*4) /(1024*4) ) -1 ;4G/4K 内存界限
+
+gdt_ptr:
+    dw (gdt_end - gdt_base )-1 ;GDT的界限
+    dd gdt_base ;GDT的基址
+gdt_base:
+    dd 0, 0 ;NULL描述符
+gdt_code:
+    dw memory_limit & 0xffff ;段界限
+    dw memory_base & 0xffff ;段基址 0-15位
+    db (memory_base >> 16) & 0xff ;段基址 16-23位
+    ;存在dpl 0 -S段-代码-非依从-可读-没有被访问过
+    db 0b_1_00_1_1_0_1_0  
+    ;4k-32位-不是64位-段界限16~19位
+    db 0b1_1_0_0_0000 | ((memory_limit >> 16) & 0x0f)
+    db (memory_limit >> 24) & 0xff ;段界限 24-31位 
+
+gdt_data:
+    dw memory_limit & 0xffff ;段界限
+    dw memory_base & 0xffff ;段基址 0-15位
+    db (memory_base >> 16) & 0xff ;段基址 16-23位
+     ;存在dpl 0 -S段-数据-非依从-可读-没有被访问过
+    db 0b_1_00_1_0_0_1_0 
+    ;4k-32位-不是64位-段界限16~19位
+    db 0b1_1_0_0_0000 | ((memory_limit >> 16) & 0x0f)
+    db (memory_limit >> 24) & 0xff ;段界限 24-31位 
+gdt_end:
+
+ards_count: 
     dw 0
 ards_buffer:
 
