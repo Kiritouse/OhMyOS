@@ -3,14 +3,43 @@
 # 使用方法，直接使用make 开头名字即可
 # 符合这种.bin和.asm的都来进行编译
 # $<代表 输入的文件，$@代表输出的文件
-%.bin:	%.asm
+BUILD:=../build
+SRC:=.
+
+# 内核的起始地址
+ENTRYPOINT:=0x10000
+
+$(BUILD)/boot/%.bin:	$(SRC)/boot/%.asm
+	$(shell mkdir -p $(dir $@)) 
 	nasm -f bin $< -o $@
 
+$(BUILD)/kernel/%.o:	$(SRC)/kernel/%.asm
+	$(shell mkdir -p $(dir $@)) 
+	nasm -f elf32 $< -o $@
 
-master.img:	boot.bin loader.bin
-	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat master.img
-	dd if=boot.bin of=master.img bs=512 count=1 conv=notrunc
-	dd if=loader.bin of=master.img bs=512 count=4 seek=2 conv=notrunc
+$(BUILD)/kernel.bin:	$(BUILD)/kernel/start.o
+	$(shell mkdir -p $(dir $@)) 
+	ld -m elf_i386 -static $^ -o $@ -Ttext $(ENTRYPOINT)
+
+$(BUILD)/system.bin:	$(BUILD)/kernel.bin
+	objcopy -O binary $< $@
+
+$(BUILD)/system.map:	$(BUILD)/kernel.bin
+	nm $< | sort >$@
+	
+
+
+$(BUILD)/master.img:	$(BUILD)/boot/boot.bin \
+	$(BUILD)/boot/loader.bin \
+	$(BUILD)/system.bin \
+	$(BUILD)/system.map \
+
+
+	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat $@
+	dd if=$(BUILD)/boot/boot.bin of=$@bs=512 count=1 conv=notrunc
+	dd if=$(BUILD)/boot/loader.bin of=$@ bs=512 count=4 seek=2 conv=notrunc
+	dd if=$(BUILD)/system.bin of=$@ bs=512 count=200 seek=10 conv=notrunc
+
 #最后一个代表从seek=2即从第二个扇区开始写，写上4个扇区
 
 # 总的来说，这行代码的作用是读取 /dev/sdb 设备的前 512 字节的数据，并将这些数据写入 tmp.bin 文件。
@@ -30,21 +59,24 @@ master.img:	boot.bin loader.bin
 # 8. `rm usb.bin`：删除 `usb.bin` 文件。
 # 总的来说，这段代码的作用是将 `boot.bin` 文件的前 446 字节的数据写入到 `/dev/sdb` 设备的前 446 字节的位置，而保留 `/dev/sdb` 设备的其他数据。这通常用于安装引导加载程序到 USB 设备。
 .PHONY: usb
-usb:	boot.bin /dev/sdb
+usb:	$(BUILD)/boot/boot.bin /dev/sdb
 	sudo dd if=/dev/sdb of=tmp.bin bs=512 count=1 conv=notrunc 
 	cp tmp.bin usb.bin 
 	sudo rm tmp.bin
-	dd if=boot.bin of=usb.bin bs=446 count=1 conv=notrunc
+	dd if=$(BUILD)/boot/boot.bin of=usb.bin bs=446 count=1 conv=notrunc
 	sudo dd if=usb.bin of=/dev/sdb bs=512 count=1 conv=notrunc
 	rm usb.bin
 #代表clean块是伪目标，不检查文件，无论如何都会执行
+test:$(BUILD)/master.img
+
+
 .PHONY: clean
 clean:
-	rm -rf *.bin
-	rm -rf *.img
+	rm -rf $(BUILD)
+	
 
 
 
 .PHONY: bochs
-bochs:	master.img
+bochs:	$(BUILD)/master.img
 	bochs -q
