@@ -22,7 +22,7 @@ call read_disk
 
 cmp word [0x1000], 0x55aa ;比较0x1000的位置是不是0x55aa,即是否加载Loader
 jnz error
-jmp 0:0x1002 ;这里是打印字符串的位置
+jmp 0:0x1008 ;这里是打印字符串的位置  ;做个标记----------------- ，这里动过
 
 
 
@@ -54,7 +54,7 @@ read_disk:
 
     mov al, 0b1110_0000;
     or al, cl
-    out dx,al; 主盘-LBA模式
+    out dx, al; 主盘-LBA模式
     
     inc dx;0x1f7
     mov al, 0x20;读硬盘
@@ -121,6 +121,6 @@ error:
 
 ; 填充剩余空间
 ;$-$$表示当前位置与当前段的开始位置的偏移量
-times 510-($-$$) db 0
+times 510 - ( $ - $$) db 0
 ; 主引导扇区的最后两个字节必须是0x55,0xaa，结束标志
 db 0x55,0xaa

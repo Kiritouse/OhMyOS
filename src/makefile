@@ -22,27 +22,26 @@ $(BUILD)/kernel.bin:	$(BUILD)/kernel/start.o
 	ld -m elf_i386 -static $^ -o $@ -Ttext $(ENTRYPOINT)
 
 $(BUILD)/system.bin:	$(BUILD)/kernel.bin
-	objcopy -O binary $< $@
+	objcopy -O binary $< $@ 
 
 $(BUILD)/system.map:	$(BUILD)/kernel.bin
-	nm $< | sort >$@
+	nm $< | sort > $@
 	
-
+ 
 
 $(BUILD)/master.img:	$(BUILD)/boot/boot.bin \
 	$(BUILD)/boot/loader.bin \
 	$(BUILD)/system.bin \
 	$(BUILD)/system.map \
-
-
+	
 	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat $@
-	dd if=$(BUILD)/boot/boot.bin of=$@bs=512 count=1 conv=notrunc
+	dd if=$(BUILD)/boot/boot.bin of=$@ bs=512 count=1 conv=notrunc
 	dd if=$(BUILD)/boot/loader.bin of=$@ bs=512 count=4 seek=2 conv=notrunc
 	dd if=$(BUILD)/system.bin of=$@ bs=512 count=200 seek=10 conv=notrunc
 
 #最后一个代表从seek=2即从第二个扇区开始写，写上4个扇区
 
-# 总的来说，这行代码的作用是读取 /dev/sdb 设备的前 512 字节的数据，并将这些数据写入 tmp.bin 文件。
+# 总的来说，这行代码的作用是读取 /dev/sdb  设备的前 512 字节的数据，并将这些数据写入 tmp.bin 文件。
 # tmp.bin不可读取，但是usb.bin可读取
 # 将boot.bin的数据写入到usb.bin里面，但是不能覆盖掉usb.bin
 # 的后面的主引导扇区里面的硬盘分区表的信息
@@ -52,7 +51,7 @@ $(BUILD)/master.img:	$(BUILD)/boot/boot.bin \
 # 1. `.PHONY: usb`：声明 `usb` 是一个伪目标。
 # 2. `usb: boot.bin /dev/sdb`：定义了 `usb` 伪目标的依赖。这意味着在执行 `usb` 目标之前，`make` 命令会检查 `boot.bin` 文件和 `/dev/sdb` 设备。
 # 3. `sudo dd if=/dev/sdb of=tmp.bin bs=512 count=1 conv=notrunc`：从 `/dev/sdb` 设备读取前 512 字节的数据，并将这些数据写入 `tmp.bin` 文件。
-# 4. `cp tmp.bin usb.bin`：复制 `tmp.bin` 文件到 `usb.bin` 文件。
+# 4. `cp tmp.bin usb. bin`：复制 `tmp.bin` 文件到 `usb.bin` 文件。
 # 5. `sudo rm tmp.bin`：删除 `tmp.bin` 文件。
 # 6. `dd if=boot.bin of=usb.bin bs=446 count=1 conv=notrunc`：从 `boot.bin` 文件读取前 446 字节的数据，并将这些数据写入 `usb.bin` 文件。这会覆盖 `usb.bin` 文件的前 446 字节的数据。
 # 7. `sudo dd if=usb.bin of=/dev/sdb bs=512 count=1 conv=notrunc`：将 `usb.bin` 文件的内容写入到 `/dev/sdb` 设备。这会覆盖 `/dev/sdb` 设备的前 512 字节的数据。
