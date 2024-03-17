@@ -5,9 +5,13 @@ dd 0x55aa;魔数，用于判断错误
 
 
 ;打印字符串
-mov si, loading 
+ 
+mov si, loading
+
 call print
-xchg bx, bx;断点
+
+ 
+
 detect_memory:
     ; 将ebx置0
     xor ebx, ebx
@@ -40,7 +44,7 @@ detect_memory:
  ;前面的所有都是实模式
     jmp prepare_protected_mode
 prepare_protected_mode:
-    xchg bx, bx
+    ; xchg bx, bx
     cli ;关闭中断
 
 ;打开A20线，操作0x92端口
@@ -71,8 +75,10 @@ print:
     jmp .next
 .done:
     ret
+
+
 loading:
-    db "Loading Onix...", 10, 13, 0;10是换行符，13是将光标移到开头，0是结束
+    db "Loading ...", 10, 13, 0;10是换行符，13是将光标移到开头，0是结束
 detecting:
     db "Detecting Memory Success...", 10, 13, 0
 
@@ -85,7 +91,7 @@ error:
 
 [bits 32]
 protect_mode:
-    xchg bx,bx
+    ; xchg bx,bx
     mov ax, data_selector
     mov ds, ax
     mov es, ax

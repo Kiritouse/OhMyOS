@@ -8,6 +8,17 @@ SRC:=.
 
 # 内核的起始地址
 ENTRYPOINT:=0x10000
+CFLAGS:= -m32 #表示32位的程序
+CFLAGS+= -fno-builtin #表示不使用gcc内建函数,而是使用自己的函数
+CFLAGS+= -nostdinc #表示不使用标准库
+CFLAGS+= -fno-pic #表示不使用位置无关代码 position independent code 
+CFLAGS+= -fno-pie #表示不使用位置无关的可执行文件
+CFLAGS+= -nostdlib #表示不使用标准库
+CFLAGS+= -fno-stack-protector #表示不使用栈保护
+CFLAGS:= $(strip ${CFLAGS})  #去掉多余的空格
+
+DEBUG:= -g
+INCLUDE:=-I$(SRC)/include
 
 $(BUILD)/boot/%.bin:	$(SRC)/boot/%.asm
 	$(shell mkdir -p $(dir $@)) 
@@ -15,9 +26,15 @@ $(BUILD)/boot/%.bin:	$(SRC)/boot/%.asm
 
 $(BUILD)/kernel/%.o:	$(SRC)/kernel/%.asm
 	$(shell mkdir -p $(dir $@)) 
-	nasm -f elf32 $< -o $@
+	nasm -f elf32 $(DEBUG) $< -o $@
 
-$(BUILD)/kernel.bin:	$(BUILD)/kernel/start.o
+$(BUILD)/kernel/%.o:	$(SRC)/kernel/%.c
+	$(shell mkdir -p $(dir $@)) 
+	gcc $(CFLAGS) $(DEBUG) $(INCLUDE) -c $< -o $@
+
+$(BUILD)/kernel.bin:	$(BUILD)/kernel/start.o \
+	 $(BUILD)/kernel/main.o 
+
 	$(shell mkdir -p $(dir $@)) 
 	ld -m elf_i386 -static $^ -o $@ -Ttext $(ENTRYPOINT)
 
