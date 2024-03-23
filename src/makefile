@@ -83,6 +83,7 @@ usb:	$(BUILD)/boot/boot.bin /dev/sdb
 	sudo dd if=usb.bin of=/dev/sdb bs=512 count=1 conv=notrunc
 	rm usb.bin
 #代表clean块是伪目标，不检查文件，无论如何都会执行
+
 test:$(BUILD)/master.img
 
 
@@ -95,4 +96,8 @@ clean:
 
 .PHONY: bochs
 bochs:	$(BUILD)/master.img
-	bochs -q
+	bochs -q  -f ../bochs/bochsrc
+
+.PHONY: bochsg
+bochsg:	$(BUILD)/master.img
+	bochs-gdb -q -f ../bochs/bochsrc.gdb

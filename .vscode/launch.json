@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name":"OhMyOS - Build and debug kernel",
+            "type":"cppdbg",
+            "request":"launch",
+            "program": "${workspaceFolder}/build/kernel.bin",
+            "MIMode": "gdb",
+            "miDebuggerServerAddress": "localhost:1234",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
             "name":"gcc - Build and debug active file",
             "type":"cppdbg",
             "request":"launch",
