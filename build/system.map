@@ -1,8 +1,8 @@
 00010000 T _start
 0001000d T kernel_init
-00013000 D magic
-00013004 D message
-00013014 B __bss_start
-00013014 D _edata
-00013020 B buf
-00013420 B _end
+00012000 D magic
+00012004 D message
+00012014 D _edata
+00012020 B __bss_start
+00012020 B buf
+00012420 B _end
